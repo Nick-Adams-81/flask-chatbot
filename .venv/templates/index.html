@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot UI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <div class="chat-history">
+        <div id="chat-box">
+            <!-- Chat history will be appended here -->
+        </div>
+    </div>
+
+    <div class="input-section">
+        <textarea id="user-input" placeholder="Talk to me here..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    function appendMessage(message, sender) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add(sender);
+        messageElement.innerText = message;
+        document.getElementById("chat-box").appendChild(messageElement);
+    }
+
+    function sendMessage() {
+        const userInput = document.getElementById("user-input").value;
+        if (userInput.trim() !== "") {
+            appendMessage(userInput, "user");
+            document.getElementById("user-input").value = "";  // Clear input field
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage(data.response, "bot");
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
