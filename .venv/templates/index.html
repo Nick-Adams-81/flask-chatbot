@@ -24,9 +24,18 @@
 <script>
     function appendMessage(message, sender) {
         const messageElement = document.createElement("div");
-        messageElement.classList.add(sender);
-        messageElement.innerText = message;
+        messageElement.classList.add("message"); // Add message wrapper for alignment
+
+        const bubble = document.createElement("div");
+        bubble.classList.add(sender); // Add 'user' or 'bot' class
+        bubble.innerText = message;
+
+        messageElement.appendChild(bubble);
         document.getElementById("chat-box").appendChild(messageElement);
+
+        // Auto-scroll to the bottom of the chat box
+        const chatBox = document.getElementById("chat-box");
+        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
     }
 
     function sendMessage() {
@@ -34,6 +43,15 @@
         if (userInput.trim() !== "") {
             appendMessage(userInput, "user");
             document.getElementById("user-input").value = "";  // Clear input field
+
+            // Check for exit or quit command
+        if (userInput.toLowerCase() === "exit" || userInput.toLowerCase() === "quit") {
+            appendMessage("Bot: Goodbye!", "bot");
+            setTimeout(() => {
+                window.close(); // Close the window after a short delay
+            }, 2000);
+            return;
+        }
 
             fetch('/chat', {
                 method: 'POST',
