@@ -6,7 +6,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from .guardrails.context_guardrail import get_allowed_keywords, is_question_relevant, REFERENCE_TEXT, get_embedding
 from .guardrails.safety_guardrail import safety_guardrail
-from .data_ingestion import txt_loader
+from .data_ingestion.txt_loader import txt_loader, retriever
 
 load_dotenv()
 
@@ -16,7 +16,6 @@ def chat_bot(document_path, user_input):
 
     # Check if the user input contains harmful language using the safety guardrail.
     is_profane, profane_words = safety_guardrail(user_input)
-    print(f"Profanity check result: {is_profane}, Detected words: {profane_words}")  # Debugging line
 
     if is_profane:
         return f"Please refrain from using harmful or offensive language. Detected words: {', '.join(profane_words)}"
@@ -25,10 +24,10 @@ def chat_bot(document_path, user_input):
     llm = ChatOpenAI(model="gpt-4o")
 
     # Load and process the document(s)
-    document = txt_loader.txt_loader(document_path)
+    document = txt_loader(document_path)
 
     # Retrieve chunked documents
-    retriever = txt_loader.retriever(document)
+    retrieve = retriever(document)
 
     # Initialize the chat history
     chat_history = []
@@ -55,7 +54,7 @@ def chat_bot(document_path, user_input):
 
     # Create chain
     qa_chain = create_stuff_documents_chain(llm, prompt_template)
-    rag_chain = create_retrieval_chain(retriever, qa_chain)
+    rag_chain = create_retrieval_chain(retrieve, qa_chain)
 
     # Format history as a single string
     history_text = "\n".join([f"User: {msg['user']}\nBot: {msg['bot']}" for msg in chat_history])
