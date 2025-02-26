@@ -46,14 +46,14 @@
 
             // Check for exit or quit command
         if (userInput.toLowerCase() === "exit" || userInput.toLowerCase() === "quit") {
-            appendMessage("Bot: Goodbye!", "bot");
+            appendMessage("Bot: Thanks for using me today, Goodbye!", "bot");
             setTimeout(() => {
                 window.close(); // Close the window after a short delay
             }, 2000);
             return;
         }
 
-            fetch('/chat', {
+            fetch('/chatbot', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
