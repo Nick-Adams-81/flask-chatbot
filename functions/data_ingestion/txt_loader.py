@@ -13,13 +13,11 @@ def txt_loader(document_path):
 
 # Retriever using FAISS
 def retriever(chunks):
+    # Embedding model
     embedding = OpenAIEmbeddings(model="text-embedding-3-large")
-
     # Convert text chunks into LangChain Document objects
     documents = [Document(page_content=chunk.page_content) for chunk in chunks]
-
     # Create FAISS vector store from documents
     vector_store = FAISS.from_documents(documents, embedding)
-
     # Return the retriever directly
     return vector_store.as_retriever()
