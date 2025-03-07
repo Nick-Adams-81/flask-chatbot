@@ -3,7 +3,7 @@ from better_profanity import profanity
 def check_for_profanity(user_input):
     """Checks if the user input contains profanity and returns the profane words."""
     # Using profanity.contains_profanity() to detect profanity in the user input
-    profane_words = [word for word in user_input.split() if profanity.contains_profanity(word)]
+    profane_words = [word for word in user_input.split() if word.lower() != "pot" and profanity.contains_profanity(word)]
 
     if profane_words:
         return True, profane_words  # Return True and the list of bad words
