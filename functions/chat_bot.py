@@ -12,11 +12,14 @@ load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
 
+# Initialize chat history globally (or you can use a database/session for persisting)
+chat_history = []
+
 def chat_bot(document_path, user_input):
+    global chat_history  # Ensure chat_history is global so it persists across calls
 
-    # Check if the user input contains harmful language using the safety guardrail.
+    # Check if the user input contains harmful language using the safety guardrail
     is_profane, profane_words = safety_guardrail(user_input)
-
     if is_profane:
         return f"Please refrain from using harmful or offensive language. Detected words: {', '.join(profane_words)}"
 
@@ -29,9 +32,7 @@ def chat_bot(document_path, user_input):
     # Retrieve chunked documents
     retrieve = retriever(document)
 
-    # Initialize the chat history
-    chat_history = []
-
+    # Read document text (optional, for relevance checks)
     with open(document_path, "r") as file:
         document_text = file.read()
 
@@ -43,10 +44,16 @@ def chat_bot(document_path, user_input):
     if not is_question_relevant(user_input, allowed_keywords, reference_embedding):
         return "I can only answer questions related to TDA rules and rulings."
 
+    # Add the user input to the chat history
+    chat_history.append({"user": user_input})
+
+    # Format the chat history for the prompt
+    history_text = "\n".join([f"User: {msg['user']}\nBot: {msg['bot']}" for msg in chat_history if 'bot' in msg])
+
     prompt_template = ChatPromptTemplate.from_messages([
         ("system", """ You are an assistant for answering questions about 
-        tournament poker rules. Use the provided context to respond. If the user query is not relevent,
-        say you can't answer.If the answer isn't clear, acknowledge that you don't know. 
+        tournament poker rules. Use the provided context to respond. If the user query is not relevant,
+        say you can't answer. If the answer isn't clear, acknowledge that you don't know. 
         Limit your response to three concise sentences.{context} 
         """),
         ("human", "{history}\nUser: {input}")
@@ -56,13 +63,13 @@ def chat_bot(document_path, user_input):
     qa_chain = create_stuff_documents_chain(llm, prompt_template)
     rag_chain = create_retrieval_chain(retrieve, qa_chain)
 
-    # Format history as a single string
-    history_text = "\n".join([f"User: {msg['user']}\nBot: {msg['bot']}" for msg in chat_history])
-
     # Get response from RAG chain
     response = rag_chain.invoke({"input": user_input, "history": history_text})
 
     # Extract bot's answer
     bot_answer = response['answer']
+
+    # Append bot response to chat history
+    chat_history[-1]["bot"] = bot_answer  # Add the bot's response to the latest entry
 
     return bot_answer
