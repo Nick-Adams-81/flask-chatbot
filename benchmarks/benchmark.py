@@ -45,9 +45,9 @@ with mlflow.start_run(run_name=f"benchmark_run"):
     for idx, test in enumerate(benchmark_tests, 1):
         question = test["question"]
         expected_responses = test["expected"]
-        
+
         # Call the chatbot with the actual logic
-        document_path = "/Users/nicholasadams/Code/flask-chatbot/data/tournament-rules.txt"  # Specify the path to the document for the chatbot
+        document_path = "/Users/nicholasadams/Code/flask-chatbot/benchmarks/benchmark.py"  # Specify the path to the document for the chatbot
         actual_response = chat_bot(document_path, question)
 
         # Check if the response is similar to any expected response

@@ -132,3 +132,27 @@ button:hover {
     background-color: #444;
     border-radius: 10px;
 }
+
+/* Typing Indicator */
+#loading {
+    color: #bbb;
+    font-style: italic;
+    font-size: 14px;
+    align-self: flex-start;
+    margin-left: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+/* Typing dots animation */
+@keyframes dots {
+    0% { content: ""; }
+    33% { content: "."; }
+    66% { content: ".."; }
+    100% { content: "..."; }
+}
+
+#dots::after {
+    content: "";
+    animation: dots 1.5s infinite;
+}

@@ -27,13 +27,13 @@ def extract_keywords_from_text(text):
     """Extracts significant keywords from the source text based on frequency and simple word filtering."""
     # Use regex to extract words (ignoring common stop words)
     words = re.findall(r'\b\w+\b', text.lower())
-    
+
     # Define simple stop words to ignore
     stop_words = {"the", "and", "for", "to", "a", "an", "is", "in", "on", "of", "with"}
-    
+
     # Remove stop words and return filtered list of keywords
     filtered_words = [word for word in words if word not in stop_words]
-    
+
     # Return the top keywords by frequency (you can adjust the logic as needed)
     return filtered_words
 
