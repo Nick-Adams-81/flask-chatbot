@@ -1,76 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot UI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
-<body>
-
-<div class="container">
-    <div class="chat-history">
-        <div id="chat-box">
-            
-        </div>
-    </div>
-
-    <div class="input-section">
-        <textarea id="user-input" placeholder="Talk to me here..."></textarea>
-        <button onclick="sendMessage()">Send</button>
-    </div>
-</div>
-
-<script>
-    function appendMessage(message, sender) {
-        const messageElement = document.createElement("div");
-        messageElement.classList.add("message"); // Add message wrapper for alignment
-
-        const bubble = document.createElement("div");
-        bubble.classList.add(sender); // Add 'user' or 'bot' class
-        bubble.innerText = message;
-
-        messageElement.appendChild(bubble);
-        document.getElementById("chat-box").appendChild(messageElement);
-
-        // Auto-scroll to the bottom of the chat box
-        const chatBox = document.getElementById("chat-box");
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
-    }
-
-    function sendMessage() {
-        const userInput = document.getElementById("user-input").value;
-        if (userInput.trim() !== "") {
-            appendMessage(userInput, "user");
-            document.getElementById("user-input").value = "";  // Clear input field
-
-            // Check for exit or quit command
-        if (userInput.toLowerCase() === "exit" || userInput.toLowerCase() === "quit") {
-            appendMessage("Bot: Thanks for using me today, Goodbye!", "bot");
-            setTimeout(() => {
-                window.close(); // Close the window after a short delay
-            }, 2000);
-            return;
-        }
-
-            fetch('/chatbot', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ question: userInput })
-            })
-            .then(response => response.json())
-            .then(data => {
-                appendMessage(data.response, "bot");
-            });
-        }
-    }
-</script>
-
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,10 +26,10 @@
 <script>
     function appendMessage(message, sender) {
         const messageElement = document.createElement("div");
-        messageElement.classList.add("message"); // Add message wrapper for alignment
+        messageElement.classList.add("message"); 
 
         const bubble = document.createElement("div");
-        bubble.classList.add(sender); // Add 'user' or 'bot' class
+        bubble.classList.add(sender); 
         bubble.innerText = message;
 
         messageElement.appendChild(bubble);
@@ -110,13 +37,13 @@
 
         // Auto-scroll to the bottom of the chat box
         const chatBox = document.getElementById("chat-box");
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function showLoading() {
         const loadingElement = document.getElementById("loading");
-        loadingElement.style.display = "block"; // Show typing indicator
-        
+        loadingElement.style.display = "block";
+
         let count = 0;
         return setInterval(() => {
             document.getElementById("dots").textContent = ".".repeat(count % 4);
@@ -156,11 +83,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading(loadingInterval); // Hide typing indicator
+                hideLoading(loadingInterval);
                 appendMessage(data.response, "bot");
             })
             .catch(error => {
-                hideLoading(loadingInterval); // Hide typing indicator
+                hideLoading(loadingInterval);
                 appendMessage("Error: Unable to fetch response", "bot");
             });
         }

@@ -16,7 +16,8 @@ api_key = os.getenv("OPENAI_API_KEY")
 chat_history = []
 
 def chat_bot(document_path, user_input):
-    global chat_history  # Ensure chat_history is global so it persists across calls
+    # Ensure chat_history is global so it persists across calls
+    global chat_history
 
     # Check if the user input contains harmful language using the safety guardrail
     is_profane, profane_words = safety_guardrail(user_input)
@@ -50,6 +51,7 @@ def chat_bot(document_path, user_input):
     # Format the chat history for the prompt
     history_text = "\n".join([f"User: {msg['user']}\nBot: {msg['bot']}" for msg in chat_history if 'bot' in msg])
 
+    # Prompt template
     prompt_template = ChatPromptTemplate.from_messages([
         ("system", """ You are an assistant for answering questions about 
         tournament poker rules. Use the provided context to respond. If the user query is not relevant,
@@ -70,6 +72,7 @@ def chat_bot(document_path, user_input):
     bot_answer = response['answer']
 
     # Append bot response to chat history
-    chat_history[-1]["bot"] = bot_answer  # Add the bot's response to the latest entry
+    # Add the bot's response to the latest entry
+    chat_history[-1]["bot"] = bot_answer
 
     return bot_answer

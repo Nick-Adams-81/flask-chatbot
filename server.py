@@ -10,7 +10,8 @@ DOCUMENT_PATH = "./data/tournament-rules.txt"
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")  # For session management
+# For session management
+app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
 
 # Fetch credentials from .env
 USERNAME = os.getenv("ADMIN_USERNAME")

@@ -34,7 +34,7 @@ def extract_keywords_from_text(text):
     # Remove stop words and return filtered list of keywords
     filtered_words = [word for word in words if word not in stop_words]
 
-    # Return the top keywords by frequency (you can adjust the logic as needed)
+    # Return the top keywords by frequency
     return filtered_words
 
 # Dynamically extract keywords from the source material
