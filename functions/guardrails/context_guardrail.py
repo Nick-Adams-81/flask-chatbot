@@ -14,7 +14,16 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Reference text for relevance checking
 REFERENCE_TEXT = "Tournament Directors Association (TDA) rules for poker tournaments."
-REFERENCE_EMBEDDING = np.array(embeddings.embed_query(REFERENCE_TEXT)).reshape(1, -1)
+
+# Make reference embedding lazy to avoid API calls during import
+_reference_embedding = None
+
+def get_reference_embedding():
+    """Lazy loading of reference embedding to avoid API calls during import."""
+    global _reference_embedding
+    if _reference_embedding is None:
+        _reference_embedding = np.array(embeddings.embed_query(REFERENCE_TEXT)).reshape(1, -1)
+    return _reference_embedding
 
 # Predefined keyword list
 ALLOWED_KEYWORDS = ["poker", "tournament", "rules", "blinds", "chips", "floor", "dealer", "hand rankings"]

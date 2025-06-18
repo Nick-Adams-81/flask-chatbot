@@ -17,6 +17,11 @@ app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
 USERNAME = os.getenv("ADMIN_USERNAME")
 PASSWORD = os.getenv("ADMIN_PASSWORD")
 
+# Health check endpoint
+@app.route("/health")
+def health():
+    return jsonify({"status": "healthy", "message": "Flask app is running"}), 200
+
 # Login route
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -65,4 +70,8 @@ def chatbot():
     return jsonify({"response": bot_response})
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=6500)
+    # Use Heroku's PORT environment variable, fallback to 6500 for local development
+    port = int(os.environ.get("PORT", 6500))
+    # Disable debug mode in production
+    debug = os.environ.get("FLASK_ENV") == "development"
+    app.run(debug=debug, host="0.0.0.0", port=port)

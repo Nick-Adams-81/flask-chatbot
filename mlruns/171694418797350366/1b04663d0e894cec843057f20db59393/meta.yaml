@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/nicholasadams/Code/flask-chatbot/mlruns/171694418797350366/1b04663d0e894cec843057f20db59393/artifacts
+end_time: 1744403108192
+entry_point_name: ''
+experiment_id: '171694418797350366'
+lifecycle_stage: active
+run_id: 1b04663d0e894cec843057f20db59393
+run_name: benchmark_run
+run_uuid: 1b04663d0e894cec843057f20db59393
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1744403093781
+status: 3
+tags: []
+user_id: nicholasadams

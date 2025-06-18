@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
-from .guardrails.context_guardrail import get_allowed_keywords, is_question_relevant, REFERENCE_TEXT, get_embedding
+from .guardrails.context_guardrail import get_allowed_keywords, is_question_relevant, REFERENCE_TEXT, get_embedding, get_reference_embedding
 from .guardrails.safety_guardrail import safety_guardrail
 from .data_ingestion.txt_loader import txt_loader, retriever
 
@@ -39,7 +39,7 @@ def chat_bot(document_path, user_input):
 
     # Get allowed keywords for relevance check
     allowed_keywords = get_allowed_keywords(document_text)
-    reference_embedding = get_embedding(REFERENCE_TEXT)
+    reference_embedding = get_reference_embedding()
 
     # Check if the user's question is relevant using the guardrail
     if not is_question_relevant(user_input, allowed_keywords, reference_embedding):
