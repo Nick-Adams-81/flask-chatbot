@@ -1,10 +1,10 @@
-from smtplib import OLDSTYLE_AUTH
 import numpy as np
-from datetime import date, datetime
+from datetime import datetime
 import hashlib
 from typing import Dict, Optional, Tuple, List
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_openai import OpenAIEmbeddings
+import re
 
 class Cache:
     def __init__(self, max_cache_size: int = 1000, similarity_threshold: float = 0.85, eviction_policy: str = "lru"):
@@ -26,6 +26,16 @@ class Cache:
 
         # Embedding model
         self.embedding_model = OpenAIEmbeddings(model="text-embedding-3-small")
+
+        # Single compiled regex pattern for number extraction
+        self.number_pattern = re.compile(r"""
+            (?P<players>(\d+)\s*(?:players?|people|participants?))|
+            (?P<tables>(\d+)\s*tables?|table\s*(\d+))|
+            (?P<chips>(\d+)\s*(?:chips?|stack))|
+            (?P<blinds>(\d+)\s*blinds?|blind\s*(\d+))|
+            (?P<cards>(\d+)\s*cards?)|
+            (?P<general>(\d+))
+        """, re.IGNORECASE | re.VERBOSE)
 
         # Stats
         self.hit_count = 0
@@ -55,6 +65,145 @@ class Cache:
         """Generate hash for embedding to use as cache key"""
         return hashlib.md5(embedding.tobytes()).hexdigest()
 
+    def extract_numbers_with_context(self, text: str) -> Dict[str, List[int]]:
+        """Extract numbers from text and group them by context.
+
+        Args: 
+           text: The input text to exstract numbers
+
+        Returns:
+            Dictionary with context as key and list of numbers as value
+            Ex: {"players": [8, 6], "tables": [2], "chips":[1000]}
+        """
+        result = {}
+
+        # Single pass through text
+        for match in self.number_pattern.finditer(text):
+            # extract the context from the named group
+            context = match.lastgroup
+
+            # extract the number from the appropriate group
+            number = None
+            if context == "players":
+                number = match.group(2)
+            elif context == "tables":
+                # check which pattern matched for tables
+                if match.group(3):
+                    number = match.group(3)
+                else:
+                    number = match.group(4)
+            elif context == "chips":
+                number = match.group(5)
+            elif context == "blinds":
+                if match.group(6):
+                    number = match.group(6)
+                else:
+                    number = match.group(7)
+            elif context == "cards":
+                number = match.group(8)
+            elif context == "general":
+                number = match.group(9)
+            else:
+                continue
+
+            # Only add if we successfully extracted a number
+            if number is not None:
+                try:
+                    number_int = int(number)
+                    if context not in result:
+                        result[context] = []
+                    result[context].append(number_int)
+                except (ValueError, TypeError):
+                    # Skip invalid numbers
+                    continue
+
+        # sort numbers for consistent comparison
+        for context in result:
+            result[context] = sorted(result[context])
+
+        return result
+
+    def compare_number_patterns(self, numbers1: Dict[str, List[int]], numbers2: Dict[str, List[int]]) -> float:
+        """Compare number patterns between two questions and return similarity score
+        
+        Args:
+            numbers1: Numbers from first question
+            numbers2: Numbers from second question
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        if not numbers1 and not numbers2:
+            return 1.0
+        
+        if not numbers1 or not numbers2:
+            return 0.6
+        
+        all_contexts = set(numbers1.keys()) | set(numbers2.keys())
+        total_similarity = 0.0
+        total_contexts = 0
+
+        for context in all_contexts:
+            nums1 = numbers1.get(context, [])
+            nums2 = numbers2.get(context, [])
+
+            if nums1 == nums2:
+                total_similarity += 1.0
+            elif nums1 and nums2:
+                if len(nums1) == len(nums2):
+                    differences = [abs(a - b) for a, b in zip(nums1, nums2)]
+                    avg_difference = sum(differences) / len(differences)
+                    max_value = max(max(nums1), max(nums2))
+
+                    # Much stricter number comparison - any difference should heavily penalize similarity
+                    if avg_difference == 0:
+                        total_similarity += 1.0
+                    elif avg_difference <= 1:
+                        total_similarity += 0.1  # Reduced from 0.3
+                    elif avg_difference <= max_value * 0.05:  # Reduced from 0.1
+                        total_similarity += 0.05  # Reduced from 0.1
+                    else:
+                        total_similarity += 0.0
+                else:
+                    total_similarity += 0.05  # Reduced from 0.1
+            else:
+                total_similarity += 0.2  # Reduced from 0.3
+            
+            total_contexts += 1
+        return total_similarity / total_contexts if total_contexts > 0 else 1.0
+
+    def calculate_number_aware_similarity(self, question1: str, question2: str, embedding_similarity: float) -> float:
+        """
+        Calculate similarity that takes into account both semantic similarity and number patterns.
+        
+        Args:
+            question1: First question
+            question2: Second question
+            embedding_similarity: Semantic similarity from embeddings
+            
+        Returns:
+            Combined similarity score
+        """
+        # Extract numbers from both questions
+        numbers1 = self.extract_numbers_with_context(question1)
+        numbers2 = self.extract_numbers_with_context(question2)
+        
+        # Calculate number similarity
+        number_similarity = self.compare_number_patterns(numbers1, numbers2)
+        
+        # Combine embedding similarity with number similarity
+        # Weight: 50% embedding similarity, 50% number similarity (increased number weight)
+        final_similarity = (embedding_similarity * 0.5) + (number_similarity * 0.5)
+        
+        # Debug logging
+        print(f"Embedding similarity: {embedding_similarity:.3f}")
+        print(f"Number similarity: {number_similarity:.3f}")
+        print(f"Final similarity: {final_similarity:.3f}")
+        print(f"Numbers1: {numbers1}")
+        print(f"Numbers2: {numbers2}")
+        
+        return final_similarity
+
     def find_similar_question(self, question_embedding: np.ndarray) -> Tuple[Optional[str], float]:
         """Find the most similar cached question and its similarity score"""
         best_match = None
@@ -79,35 +228,46 @@ class Cache:
             return None
 
         # Find similar question in cache
-        best_match_key, similarity_score = self.find_similar_question(question_embedding)
+        best_match_key, embedding_similarity = self.find_similar_question(question_embedding)
         
-        # DEBUG: Print similarity information
+        # DEBUG: Print similarity information for ALL requests
         print(f"Question: '{question}'")
-        print(f"Best similarity score: {similarity_score:.3f}")
+        print(f"Best embedding similarity score: {embedding_similarity:.3f}")
         print(f"Threshold: {self.similarity_threshold}")
         if best_match_key:
             print(f"Best match: '{self.cache[best_match_key]['original_question']}'")
         else:
             print("No similar questions found in cache")
 
-        # Check if similarity is above threshold
-        if best_match_key and similarity_score >= self.similarity_threshold:
-            # Cache hit - update stats and access info
-            self.hit_count += 1
-            self.cache[best_match_key]["access_count"] += 1
-            self.cache[best_match_key]["last_accessed"] = datetime.now()
+        # NEW: Apply number-aware similarity adjustment
+        if best_match_key and embedding_similarity >= self.similarity_threshold:
+            # Calculate number-aware similarity
+            cached_question = self.cache[best_match_key]['original_question']
+            final_similarity = self.calculate_number_aware_similarity(question, cached_question, embedding_similarity)
+            
+            # Check if final similarity is above threshold
+            if final_similarity >= self.similarity_threshold:
+                # Cache hit - update stats and access info
+                self.hit_count += 1
+                self.cache[best_match_key]["access_count"] += 1
+                self.cache[best_match_key]["last_accessed"] = datetime.now()
 
-            # Update access order in LRU cache
-            if best_match_key in self.access_order:
-                self.access_order.remove(best_match_key)
-            self.access_order.append(best_match_key)
+                # Update access order in LRU cache
+                if best_match_key in self.access_order:
+                    self.access_order.remove(best_match_key)
+                self.access_order.append(best_match_key)
 
-            print(f"CACHE HIT! Returning cached response")
-            return self.cache[best_match_key]["response"]
+                print(f"CACHE HIT! Returning cached response")
+                return self.cache[best_match_key]["response"]
+            else:
+                # Number similarity brought it below threshold
+                self.miss_count += 1
+                print(f"CACHE MISS! Final similarity {final_similarity:.3f} < threshold {self.similarity_threshold}")
+                return None
         else:
             # Cache miss
             self.miss_count += 1
-            print(f"CACHE MISS! Similarity {similarity_score:.3f} < threshold {self.similarity_threshold}")
+            print(f"CACHE MISS! Embedding similarity {embedding_similarity:.3f} < threshold {self.similarity_threshold}")
             return None
 
     def add_response(self, question: str, response: str) -> None:
