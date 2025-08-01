@@ -256,4 +256,4 @@ def initialize_pinecone():
         print("Pinecone initialization failed")
     return success
 
-#initialize_pinecone()
+initialize_pinecone()
