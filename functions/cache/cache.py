@@ -4,6 +4,7 @@ import hashlib
 from typing import Dict, Optional, Tuple, List
 from sklearn.metrics.pairwise import cosine_similarity
 from langchain_openai import OpenAIEmbeddings
+from .embedding_cache import EmbeddingCache
 import re
 
 class Cache:
@@ -19,6 +20,9 @@ class Cache:
         self.max_cache_size = max_cache_size
         self.similarity_threshold = similarity_threshold
         self.eviction_policy = eviction_policy
+
+        # Embedding cache
+        self.embedding_cache = EmbeddingCache(max_size=1000, ttl_hours=24)
 
         # Storage
         self.cache: Dict[str, Dict] = {}
@@ -43,13 +47,14 @@ class Cache:
         self.total_requests = 0
         self.creation_time = datetime.now()
 
-    def generate_embedding(self, text:str) -> np.ndarray:
+    def generate_embedding(self, text: str) -> np.ndarray:
         """Generate embedding for given text"""
-        try:
-            embedding = self.embedding_model.embed_query(text)
-            return np.array(embedding).reshape(1, -1)
-        except Exception as e:
-            print(f"Embedding generation failed: {e}")
+    
+        embedding = self.embedding_cache.get_embedding(text)
+        if embedding is not None:
+            return embedding
+        else:
+            print(f"Failed to generate embedding for: {text[:50]}...")
             return None
         
     def calculate_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
