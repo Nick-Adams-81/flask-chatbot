@@ -1,7 +1,9 @@
 import os
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from dotenv import load_dotenv
+from functions import cache
 from functions.chat_bot import chat_bot
+from functions.cache.cache import Cache
 
 # # Load document path
 DOCUMENT_PATH = "./data/tournament-rules.txt"
@@ -12,6 +14,8 @@ load_dotenv()
 app = Flask(__name__)
 # For session management
 app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
+
+cache_manager = Cache(max_cache_size=100, similarity_threshold=0.85, eviction_policy="lru")
 
 # Fetch credentials from .env
 USERNAME = os.getenv("ADMIN_USERNAME")
@@ -68,6 +72,21 @@ def chatbot():
     bot_response = chat_bot(DOCUMENT_PATH, user_input)
 
     return jsonify({"response": bot_response})
+
+@app.route("/cache-stats")
+def cache_stats():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    stats = cache_manager.get_cache_stats()
+    embedding_stats = cache_manager.embedding_cache.get_stats()
+    combined_stats = {
+        "response_cache": stats,
+        "embedding_cache": embedding_stats,
+        "total_api_calls_saved": stats.get("api_calls_saved", 0) + embedding_stats.get("api_calls_saved", 0)
+
+    }
+    return jsonify(combined_stats)
 
 if __name__ == "__main__":
     # Use Heroku's PORT environment variable, fallback to 6500 for local development
