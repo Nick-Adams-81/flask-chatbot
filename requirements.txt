@@ -80,6 +80,8 @@ overrides==7.7.0
 packaging==24.2
 pandas==2.2.3
 pillow==11.1.0
+pinecone-client==6.0.0
+pinecone-plugin-interface==0.0.7
 pip-autoremove==0.10.0
 pipdeptree==2.25.0
 posthog==3.15.1
