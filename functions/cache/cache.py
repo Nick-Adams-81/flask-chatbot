@@ -8,7 +8,7 @@ from .embedding_cache import EmbeddingCache
 import re
 
 class Cache:
-    def __init__(self, max_cache_size: int = 1000, similarity_threshold: float = 0.85, eviction_policy: str = "lru"):
+    def __init__(self, max_cache_size: int = 1000, similarity_threshold: float = 0.75, eviction_policy: str = "lru"):
         """
         Initialize the cache with in-memory dictionary storage.
 
@@ -224,9 +224,21 @@ class Cache:
 
     def get_response(self, question: str) -> Optional[str]:
         """Main method: check cache for similar question and return response if found"""
-        self.total_requests += 1
+        # Step 1: Check for EXACT text match first (response cache)
+        if question in self.cache:
+            print(f"Exact match found for: {question}")
+            self.hit_count += 1
+            self.total_requests += 1
 
-        # Generate embedding for the question
+            #update access order for LRU
+            if question in self.access_order:
+                self.access_order.remove(question)
+            self.access_order.append(question)
+
+            #return cached response
+            return self.cache[question]["response"]
+        
+        # Step 2: Generate embedding for the question (this will use embedding cache if available)
         question_embedding = self.generate_embedding(question)
         if question_embedding is None:
             self.miss_count += 1
@@ -244,7 +256,7 @@ class Cache:
         else:
             print("No similar questions found in cache")
 
-        # NEW: Apply number-aware similarity adjustment
+        # Apply number-aware similarity adjustment
         if best_match_key and embedding_similarity >= self.similarity_threshold:
             # Calculate number-aware similarity
             cached_question = self.cache[best_match_key]['original_question']

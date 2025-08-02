@@ -5,6 +5,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 from langchain.schema import Document
+from pydantic_core.core_schema import general_after_validator_function
 from .guardrails.context_guardrail import get_allowed_keywords, is_question_relevant, REFERENCE_TEXT, get_embedding, get_reference_embedding
 from .guardrails.safety_guardrail import safety_guardrail
 from .data_ingestion.txt_loader import txt_loader, retriever
@@ -39,7 +40,7 @@ api_key = os.getenv("OPENAI_API_KEY")
 # Initialize chat history globally (or you can use a database/session for persisting)
 chat_history = []
 
-cache_manager = Cache(max_cache_size=100, similarity_threshold=0.60, eviction_policy="lru")
+cache_manager = Cache(max_cache_size=1000, similarity_threshold=0.75, eviction_policy="lru")
 
 # Initialize Pinecone with error handling
 try:
@@ -140,7 +141,7 @@ def chat_bot(document_path, user_input):
     is_profane, profane_words = safety_guardrail(user_input)
     if is_profane:
         return f"Please refrain from using harmful or offensive language. Detected words: {', '.join(profane_words)}"
-
+    
     # Check cache first
     cached_response = cache_manager.get_response(user_input)
     print(f"Cache lookup for: {user_input}")

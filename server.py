@@ -15,7 +15,45 @@ app = Flask(__name__)
 # For session management
 app.secret_key = os.getenv("SECRET_KEY", "your_secret_key")
 
-cache_manager = Cache(max_cache_size=100, similarity_threshold=0.85, eviction_policy="lru")
+cache_manager = Cache(max_cache_size=1000, similarity_threshold=0.75, eviction_policy="lru")
+
+def pre_warm_cache():
+    """Pre-warm the cache with common questions and their responses."""
+    common_questions = [
+        'what is the rule on all ins?',
+        'what are the blind rules?',
+        'how do chips work in tournaments?',
+        'what happens when someone is all-in?',
+        'what are the hand rankings?',
+        'what is the rule on string betting?',
+        'how do side pots work?',
+        'what is the rule on showing cards?',
+        'what happens if a player acts out of turn?',
+        'what are the rules for dealers?'
+    ]
+    
+    print("Pre-warming cache with common questions and responses...")
+    for question in common_questions:
+        try:
+            # Step 1: Generate embedding (existing)
+            cache_manager.generate_embedding(question)
+            
+            # Step 2: Generate response using the chat bot
+            response = chat_bot("./data/tournament-rules.txt", question)
+            
+            # Step 3: Add to response cache
+            cache_manager.add_response(question, response)
+            
+            print(f"Pre-warmed: {question}")
+            print(f"Response: {response[:100]}...")
+            
+        except Exception as e:
+            print(f"Failed to pre-warm: {question} - {e}")
+    
+    print("Cache pre-warming completed!")
+
+# Call pre-warming at startup
+pre_warm_cache()
 
 # Fetch credentials from .env
 USERNAME = os.getenv("ADMIN_USERNAME")
