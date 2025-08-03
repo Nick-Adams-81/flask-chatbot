@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain
 from langchain.schema import Document
 from pydantic_core.core_schema import general_after_validator_function
 from .guardrails.context_guardrail import get_allowed_keywords, is_question_relevant, REFERENCE_TEXT, get_embedding, get_reference_embedding
@@ -41,6 +40,28 @@ api_key = os.getenv("OPENAI_API_KEY")
 chat_history = []
 
 cache_manager = Cache(max_cache_size=1000, similarity_threshold=0.75, eviction_policy="lru")
+
+# Document Caching
+DOCUMENT_CONTENT = None
+ALLOWED_KEYWORDS = None
+REFERENCE_EMBEDDING = None
+
+def load_document_once(document_path: str) -> bool:
+    """Load the document once and cache it for reuse"""
+    print("Loading document content into memory...")
+    global DOCUMENT_CONTENT, ALLOWED_KEYWORDS, REFERENCE_EMBEDDING
+
+    if DOCUMENT_CONTENT is None:
+        try:
+            with open(document_path, "r") as file:
+                DOCUMENT_CONTENT = file.read()
+            ALLOWED_KEYWORDS = get_allowed_keywords(DOCUMENT_CONTENT)
+            REFERENCE_EMBEDDING = get_reference_embedding()
+            return True
+        except Exception as e:
+            print(f"Error loading document: {e}")
+            return False
+    return True
 
 # Initialize Pinecone with error handling
 try:
@@ -179,21 +200,11 @@ def chat_bot(document_path, user_input):
     # Format docs for the LLM
     context_text = "\n\n".join([doc['text'] for doc in similar_docs])
 
-    # Create a simple document-like structure for the chain
-    documents = [Document(page_content=context_text, metadata={})]
-
-    # Read the document with error handling
-    try:
-        with open(document_path, "r") as file:
-            document_text = file.read()
-    except FileNotFoundError:
+    if not load_document_once(document_path):
         return "Error: Rules document not found. Please contact support."
-    except Exception as e:
-        print(f"Error reading document: {e}")
-        return "I'm having trouble reading the rules. Please try again later."
-
+    
     # Get allowed keywords for relevance check
-    allowed_keywords = get_allowed_keywords(document_text)
+    allowed_keywords = get_allowed_keywords(DOCUMENT_CONTENT)
     reference_embedding = get_reference_embedding()
 
     # Check if the user's question is relevant using the guardrail
